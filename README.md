@@ -1,6 +1,6 @@
 # IaC Manifest Generator CLI
 
-A Go CLI tool that parses English descriptions of AWS infrastructure and generates Terraform and Crossplane manifests.
+A Go CLI tool that parses English descriptions of AWS infrastructure and generates Terraform and Crossplane manifests. This tool was created using claude-code CLI, even the prompts to write the code were generated. Please see the section at the end for the prompts used to generate this code. I have also added the amount of $$$ spent on building this tool.
 
 ## Overview
 
@@ -188,3 +188,287 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 [MIT License](LICENSE)
+
+---
+# Claude Code Prompts for IaC Manifest Generator CLI in Golang
+
+Here are structured prompts designed for using Claude Code to implement the IaC Manifest Generator CLI in Golang. Each prompt focuses on a specific component of the MVP implementation.
+
+## Project Setup Prompt
+
+```
+Create a Go project structure for an IaC Manifest Generator CLI tool. The tool will parse English descriptions of AWS infrastructure and generate Terraform and Crossplane manifests. 
+
+Include:
+1. Main package with CLI entry point
+2. Packages for natural language processing, infrastructure modeling, and manifest generation
+3. Tool-specific adapter packages for Terraform and Crossplane
+4. Utility and configuration packages
+5. Appropriate Go module initialization
+6. Directory structure following Go best practices
+
+For dependencies, include starter code with:
+- cobra for CLI functionality
+- viper for configuration management
+- A basic logging mechanism
+```
+
+## CLI Framework Prompt
+
+```
+Implement the main CLI framework for the IaC Manifest Generator using Go's cobra library. 
+
+Requirements:
+1. Create a root command with appropriate description and flags
+2. Implement subcommands for "generate" with options for:
+   - Input text or file path
+   - Output directory
+   - IaC tool selection (terraform/crossplane)
+3. Add flag for AWS region with default as "us-east-1"
+4. Include verbose/debug logging options
+5. Implement proper error handling and user feedback
+6. Structure the command execution to call the appropriate processing pipeline
+
+The CLI should be user-friendly and provide clear help documentation.
+```
+
+## NLP Parser Implementation Prompt
+
+```
+Create a pattern-based natural language processor in Go that can parse AWS infrastructure descriptions.
+
+Requirements:
+1. Implement functions to extract:
+   - VPC details (CIDR ranges if specified, otherwise use default)
+   - Subnet information (public/private, count per AZ)
+   - Internet Gateway and NAT Gateway requirements
+   - EKS cluster specifications (API access mode, version if specified)
+   - Node pool details (instance type, count)
+
+2. Use regular expressions and string matching rather than ML
+3. Extract numerical values and infrastructure component relationships
+4. Validate the extracted information for completeness
+5. Return a structured data model representing the infrastructure requirements
+
+Example input to handle:
+"AWS infra in us-east-1 with a vpc, 3 public and 3 private subnets, 1 IGW and 3 NAT gateways per az, plus an EKS Cluster with public and private api access deployed in private vpcs in 3 azs with a nodepool on t3-medium instance type"
+```
+
+## Infrastructure Model Prompt
+
+```
+Implement a Go package that defines the domain models for AWS infrastructure components.
+
+Create structs for:
+1. Infrastructure - the top-level container for all resources
+2. VPC - with region, CIDR, and associated resources
+3. Subnet - with AZ, CIDR, and public/private designation
+4. InternetGateway - with VPC association
+5. NATGateway - with subnet association
+6. EKSCluster - with API access mode and version
+7. NodePool - with instance type and count
+
+Include:
+- Appropriate field tags for JSON/YAML marshaling
+- Constructor functions with reasonable defaults
+- Validation methods to ensure consistency
+- String representation methods for logging/debugging
+- Methods to calculate derived properties (e.g., CIDR block allocation)
+
+These models should be tool-agnostic and serve as the intermediate representation.
+```
+
+## Terraform Generator Prompt
+
+```
+Create a Terraform adapter package in Go that transforms the infrastructure model into Terraform HCL files.
+
+Implement:
+1. A directory structure generator following Terraform best practices:
+   - modules/ directory with subdirectories for vpc and eks
+   - main.tf, variables.tf, outputs.tf, versions.tf in root
+   - Appropriate files within each module
+
+2. Template-based code generation for:
+   - AWS provider configuration
+   - VPC resources (vpc, subnets, route tables)
+   - Internet Gateway and NAT Gateway resources
+   - EKS cluster resources and node groups
+   - Necessary IAM roles and policies
+
+3. Functions to:
+   - Convert infrastructure model to HCL
+   - Write files to the appropriate locations
+   - Generate variable definitions with defaults
+   - Create proper resource references and dependencies
+
+Use Go's text/template package or a similar library for template rendering.
+```
+
+## Crossplane Generator Prompt
+
+```
+Implement a Crossplane adapter package in Go that converts the infrastructure model into Kubernetes YAML manifests for Crossplane AWS Provider.
+
+Create:
+1. A directory structure organizer following Kubernetes/Crossplane conventions:
+   - base/ directory for common resources
+   - vpc/ directory for networking components
+   - eks/ directory for cluster resources
+   - kustomization files where appropriate
+
+2. Functions to generate YAML manifests for:
+   - VPC and subnet resources using Crossplane AWS provider
+   - Internet Gateway and NAT Gateway compositions
+   - EKS cluster configuration
+   - Node pool definitions
+   - Required Crossplane provider configurations
+
+3. Utilities for:
+   - Converting internal models to Crossplane resource definitions
+   - Generating appropriate Kubernetes metadata
+   - Establishing proper resource dependencies
+   - Writing YAML files with correct formatting
+
+Use Go's yaml package for marshaling structs to YAML.
+```
+
+## Template System Prompt
+
+```
+Create a template system in Go for generating IaC code files.
+
+Requirements:
+1. Implement a template manager that:
+   - Loads and caches templates from embedded files
+   - Selects appropriate templates based on resource type
+   - Handles both Terraform HCL and Crossplane YAML formats
+
+2. Create template files for:
+   - VPC networking components
+   - EKS cluster configuration
+   - Node pools and instance configurations
+   - Provider setup and versions
+
+3. Implement template rendering functions that:
+   - Apply data from infrastructure models to templates
+   - Handle conditional sections based on configuration
+   - Format output according to tool-specific conventions
+   - Validate rendered content for basic syntax
+
+4. Create helper functions for common template operations
+
+Use Go's embed package to include templates in the binary for easy distribution.
+```
+
+## Pipeline Integration Prompt
+
+```
+Implement the complete processing pipeline for the IaC Manifest Generator CLI in Go.
+
+Create:
+1. A pipeline coordinator that:
+   - Takes input from CLI flags and arguments
+   - Calls the NLP processor to extract infrastructure requirements
+   - Builds the infrastructure model from parsed information
+   - Selects and invokes the appropriate IaC tool adapter
+   - Directs output to specified location
+   - Provides user feedback on progress and results
+
+2. Implement proper error handling:
+   - Validate inputs before processing
+   - Provide meaningful error messages for parsing failures
+   - Handle file system access errors gracefully
+   - Implement proper logging at each stage
+
+3. Create pipeline interfaces that allow for:
+   - Testability of each component
+   - Future extension to new IaC tools
+   - Separation of concerns between components
+
+The pipeline should be structured for maintainability and future enhancement.
+```
+
+## Testing Framework Prompt
+
+```
+Create a comprehensive testing framework for the Go implementation of the IaC Manifest Generator.
+
+Implement:
+1. Unit tests for:
+   - NLP parsing functions using table-driven tests
+   - Infrastructure model validation
+   - Template rendering accuracy
+
+2. Integration tests for:
+   - End-to-end pipeline functionality
+   - CLI command execution
+   - File generation and structure
+
+3. Test fixtures including:
+   - Sample infrastructure descriptions
+   - Expected parsed models
+   - Reference output files for comparison
+
+4. Test utilities for:
+   - Comparing generated files against expected output
+   - Creating temporary test directories
+   - Mocking file system operations for isolation
+
+Use Go's standard testing package and testify for assertions where helpful.
+```
+
+## Example Implementation Prompt
+
+```
+Create a complete working example of the Go IaC Manifest Generator CLI processing a sample infrastructure request.
+
+Implement:
+1. A main.go file that:
+   - Initializes the CLI
+   - Sets up the processing pipeline
+   - Handles command-line arguments
+
+2. A sample infrastructure description:
+   "Deploy AWS infrastructure in us-east-1 with a VPC, 3 public and 3 private subnets across 3 AZs, an internet gateway, 3 NAT gateways (one per AZ), and an EKS cluster with both public and private API access deployed in the private subnets. Include a node pool using t3-medium instances."
+
+3. Processing logic that:
+   - Parses the description using the NLP package
+   - Creates the infrastructure model
+   - Generates both Terraform and Crossplane manifests
+   - Organizes output in appropriate directory structures
+
+Include debug output showing the intermediate steps and final results.
+```
+
+## Documentation Generator Prompt
+
+```
+Create comprehensive documentation for the IaC Manifest Generator CLI in Golang.
+
+Generate:
+1. README.md with:
+   - Project overview and purpose
+   - Installation instructions
+   - Basic usage examples
+   - Supported infrastructure patterns
+
+2. A user guide explaining:
+   - CLI commands and options in detail
+   - Format for describing infrastructure requirements
+   - Limitations and constraints
+   - Output directory structure for each IaC tool
+
+3. Developer documentation covering:
+   - Project architecture and design decisions
+   - Package organization and responsibilities
+   - How to extend the tool with new capabilities
+   - Contributing guidelines
+
+Format all documentation as markdown files suitable for GitHub hosting.
+```
+
+These prompts are designed to be used with Claude Code to implement a Go-based version of the IaC Manifest Generator CLI. Each prompt focuses on a specific component while maintaining alignment with the overall architecture and MVP plan, allowing for iterative development of a complete solution.
+
+**Total cost - $14.00 to generate the code by running the prompts above**
+**Total cost for validating the tests work and regenerate the documents - $20.52**
