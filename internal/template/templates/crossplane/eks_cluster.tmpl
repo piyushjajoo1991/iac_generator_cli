@@ -1,0 +1,38 @@
+---
+apiVersion: eks.aws.crossplane.io/v1beta1
+kind: Cluster
+metadata:
+  name: {{ .Resource.Name | kebab }}
+spec:
+  forProvider:
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "role_arn" }}
+    roleArn: {{ .Value }}
+  {{- else if eq .Name "version" }}
+    version: {{ .Value }}
+  {{- else if eq .Name "vpc_config" }}
+    {{- if .Value }}
+    resourcesVpcConfig:
+      {{- if index .Value "subnet_ids" }}
+      subnetIds:
+      {{- range index .Value "subnet_ids" }}
+        - {{ . }}
+      {{- end }}
+      {{- end }}
+      {{- if index .Value "security_group_ids" }}
+      securityGroupIds:
+      {{- range index .Value "security_group_ids" }}
+        - {{ . }}
+      {{- end }}
+      {{- end }}
+      {{- if index .Value "endpoint_private_access" }}
+      endpointPrivateAccess: {{ index .Value "endpoint_private_access" }}
+      {{- end }}
+      {{- if index .Value "endpoint_public_access" }}
+      endpointPublicAccess: {{ index .Value "endpoint_public_access" }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+    tags:
+      Name: {{ .Resource.Name }}

@@ -1,0 +1,58 @@
+resource "aws_security_group" "{{ .Resource.Name | snake }}" {
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "name" }}
+  name = {{ .Value | quote }}
+  {{- else if eq .Name "description" }}
+  description = {{ .Value | quote }}
+  {{- else if eq .Name "vpc_id" }}
+  vpc_id = {{ .Value }}
+  {{- else if hasPrefix .Name "tag." }}
+  {{- $tagName := trimPrefix "tag." .Name }}
+  tags = {
+    {{ $tagName }} = {{ .Value | quote }}
+  }
+  {{- end }}
+  {{- end }}
+
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "ingress" }}
+  {{- range .Value }}
+  ingress {
+    from_port   = {{ .from_port }}
+    to_port     = {{ .to_port }}
+    protocol    = {{ .protocol | quote }}
+    cidr_blocks = {{ .cidr_blocks | toHCL }}
+    {{- if .security_groups }}
+    security_groups = {{ .security_groups | toHCL }}
+    {{- end }}
+    {{- if .description }}
+    description = {{ .description | quote }}
+    {{- end }}
+  }
+  {{- end }}
+  {{- end }}
+  {{- end }}
+
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "egress" }}
+  {{- range .Value }}
+  egress {
+    from_port   = {{ .from_port }}
+    to_port     = {{ .to_port }}
+    protocol    = {{ .protocol | quote }}
+    cidr_blocks = {{ .cidr_blocks | toHCL }}
+    {{- if .security_groups }}
+    security_groups = {{ .security_groups | toHCL }}
+    {{- end }}
+    {{- if .description }}
+    description = {{ .description | quote }}
+    {{- end }}
+  }
+  {{- end }}
+  {{- end }}
+  {{- end }}
+
+  tags = {
+    Name = "{{ .Resource.Name }}"
+  }
+}

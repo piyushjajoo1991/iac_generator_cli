@@ -1,0 +1,20 @@
+resource "aws_subnet" "{{ .Resource.Name | snake }}" {
+  vpc_id            = {{ if hasProperty .Resource "vpc_id" }}{{ getProperty .Resource "vpc_id" | quote }}{{ else }}aws_vpc.{{ (index .Resource.DependsOn 0) | snake }}.id{{ end }}
+  
+  {{- with getProperty .Resource "cidr_block" }}
+  cidr_block        = {{ . | quote }}
+  {{- end }}
+  
+  {{- with getProperty .Resource "availability_zone" }}
+  availability_zone = {{ . | quote }}
+  {{- end }}
+  
+  {{- if hasProperty .Resource "map_public_ip_on_launch" }}
+  map_public_ip_on_launch = {{ getProperty .Resource "map_public_ip_on_launch" }}
+  {{- else if hasProperty .Resource "is_public" }}
+  map_public_ip_on_launch = {{ getProperty .Resource "is_public" }}
+  {{- end }}
+  
+  {{- $tags := getTags .Resource }}
+  {{ $tags | tfTags }}
+}

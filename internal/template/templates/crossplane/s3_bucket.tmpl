@@ -1,0 +1,25 @@
+---
+apiVersion: s3.aws.crossplane.io/v1beta1
+kind: Bucket
+metadata:
+  name: {{ .Resource.Name | kebab }}
+spec:
+  forProvider:
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "bucket" }}
+    name: {{ .Value }}
+  {{- else if eq .Name "acl" }}
+    acl: {{ .Value }}
+  {{- else if eq .Name "versioning" }}
+    versioning: 
+      {{- if .Value }}
+      status: Enabled
+      {{- else }}
+      status: Suspended
+      {{- end }}
+  {{- end }}
+  {{- end }}
+    locationConstraint: {{ .Region | default "us-east-1" }}
+    tags:
+      - key: Name
+        value: {{ .Resource.Name }}

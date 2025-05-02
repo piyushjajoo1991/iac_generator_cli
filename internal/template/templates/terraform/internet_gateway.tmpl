@@ -1,0 +1,10 @@
+resource "aws_internet_gateway" "{{ .Resource.Name | snake }}" {
+  {{- if hasProperty .Resource "vpc_id" }}
+  vpc_id = {{ getProperty .Resource "vpc_id" | quote }}
+  {{- else if .Resource.DependsOn }}
+  vpc_id = aws_vpc.{{ (index .Resource.DependsOn 0) | snake }}.id
+  {{- end }}
+
+  {{- $tags := getTags .Resource }}
+  {{ $tags | tfTags }}
+}

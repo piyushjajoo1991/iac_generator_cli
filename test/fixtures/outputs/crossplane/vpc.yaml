@@ -1,0 +1,167 @@
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: VPC
+metadata:
+  name: main-vpc
+spec:
+  forProvider:
+    region: us-east-1
+    cidrBlock: 10.0.0.0/16
+    enableDnsSupport: true
+    enableDnsHostnames: true
+    tags:
+      - key: Name
+        value: main-vpc
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: Subnet
+metadata:
+  name: public-subnet-1
+spec:
+  forProvider:
+    region: us-east-1
+    cidrBlock: 10.0.0.0/24
+    vpcIdRef:
+      name: main-vpc
+    availabilityZone: us-east-1a
+    mapPublicIpOnLaunch: true
+    tags:
+      - key: Name
+        value: public-subnet-1
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: Subnet
+metadata:
+  name: public-subnet-2
+spec:
+  forProvider:
+    region: us-east-1
+    cidrBlock: 10.0.1.0/24
+    vpcIdRef:
+      name: main-vpc
+    availabilityZone: us-east-1b
+    mapPublicIpOnLaunch: true
+    tags:
+      - key: Name
+        value: public-subnet-2
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: Subnet
+metadata:
+  name: private-subnet-1
+spec:
+  forProvider:
+    region: us-east-1
+    cidrBlock: 10.0.10.0/24
+    vpcIdRef:
+      name: main-vpc
+    availabilityZone: us-east-1a
+    mapPublicIpOnLaunch: false
+    tags:
+      - key: Name
+        value: private-subnet-1
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: Subnet
+metadata:
+  name: private-subnet-2
+spec:
+  forProvider:
+    region: us-east-1
+    cidrBlock: 10.0.11.0/24
+    vpcIdRef:
+      name: main-vpc
+    availabilityZone: us-east-1b
+    mapPublicIpOnLaunch: false
+    tags:
+      - key: Name
+        value: private-subnet-2
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: InternetGateway
+metadata:
+  name: main-igw
+spec:
+  forProvider:
+    region: us-east-1
+    vpcIdRef:
+      name: main-vpc
+    tags:
+      - key: Name
+        value: main-igw
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: NATGateway
+metadata:
+  name: nat-gateway-1
+spec:
+  forProvider:
+    region: us-east-1
+    subnetIdRef:
+      name: public-subnet-1
+    allocationIdRef:
+      name: nat-eip-1
+    tags:
+      - key: Name
+        value: nat-gateway-1
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: RouteTable
+metadata:
+  name: public-route-table
+spec:
+  forProvider:
+    region: us-east-1
+    vpcIdRef:
+      name: main-vpc
+    routes:
+      - destinationCidrBlock: 0.0.0.0/0
+        gatewayIdRef:
+          name: main-igw
+    associations:
+      - subnetIdRef:
+          name: public-subnet-1
+      - subnetIdRef:
+          name: public-subnet-2
+    tags:
+      - key: Name
+        value: public-route-table
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: RouteTable
+metadata:
+  name: private-route-table
+spec:
+  forProvider:
+    region: us-east-1
+    vpcIdRef:
+      name: main-vpc
+    routes:
+      - destinationCidrBlock: 0.0.0.0/0
+        natGatewayIdRef:
+          name: nat-gateway-1
+    associations:
+      - subnetIdRef:
+          name: private-subnet-1
+      - subnetIdRef:
+          name: private-subnet-2
+    tags:
+      - key: Name
+        value: private-route-table
+  providerConfigRef:
+    name: default

@@ -1,0 +1,74 @@
+resource "aws_eks_cluster" "{{ .Resource.Name | snake }}" {
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "name" }}
+  name = {{ .Value | quote }}
+  {{- else if eq .Name "role_arn" }}
+  role_arn = {{ .Value }}
+  {{- else if eq .Name "version" }}
+  version = {{ .Value | quote }}
+  {{- else if eq .Name "vpc_config" }}
+  {{- if .Value }}
+  vpc_config {
+    {{- if index .Value "subnet_ids" }}
+    subnet_ids = {{ index .Value "subnet_ids" | toHCL }}
+    {{- end }}
+    {{- if index .Value "security_group_ids" }}
+    security_group_ids = {{ index .Value "security_group_ids" | toHCL }}
+    {{- end }}
+    {{- if index .Value "endpoint_private_access" }}
+    endpoint_private_access = {{ index .Value "endpoint_private_access" }}
+    {{- end }}
+    {{- if index .Value "endpoint_public_access" }}
+    endpoint_public_access = {{ index .Value "endpoint_public_access" }}
+    {{- end }}
+  }
+  {{- end }}
+  {{- else if hasPrefix .Name "tag." }}
+  {{- $tagName := trimPrefix "tag." .Name }}
+  tags = {
+    {{ $tagName }} = {{ .Value | quote }}
+  }
+  {{- end }}
+  {{- end }}
+
+  tags = {
+    Name = "{{ .Resource.Name }}"
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.{{ .Resource.Name | snake }}_AmazonEKSClusterPolicy,
+    aws_iam_role_policy_attachment.{{ .Resource.Name | snake }}_AmazonEKSVPCResourceController
+  ]
+}
+
+# IAM Role for EKS Cluster
+resource "aws_iam_role" "{{ .Resource.Name | snake }}_role" {
+  name = "{{ .Resource.Name }}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "{{ .Resource.Name }}-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "{{ .Resource.Name | snake }}_AmazonEKSClusterPolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.{{ .Resource.Name | snake }}_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "{{ .Resource.Name | snake }}_AmazonEKSVPCResourceController" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+  role       = aws_iam_role.{{ .Resource.Name | snake }}_role.name
+}

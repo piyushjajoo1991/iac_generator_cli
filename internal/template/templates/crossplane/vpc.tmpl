@@ -1,0 +1,31 @@
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: VPC
+metadata:
+  name: {{ .Resource.Name | kebab }}
+spec:
+  forProvider:
+    {{- with getProperty .Resource "cidr_block" }}
+    cidrBlock: {{ . }}
+    {{- end }}
+    
+    {{- if hasProperty .Resource "enable_dns_support" }}
+    enableDnsSupport: {{ getProperty .Resource "enable_dns_support" }}
+    {{- else }}
+    enableDnsSupport: true
+    {{- end }}
+    
+    {{- if hasProperty .Resource "enable_dns_hostnames" }}
+    enableDnsHostnames: {{ getProperty .Resource "enable_dns_hostnames" }}
+    {{- else }}
+    enableDnsHostnames: true
+    {{- end }}
+    
+    {{- if hasProperty .Resource "instance_tenancy" }}
+    instanceTenancy: {{ getProperty .Resource "instance_tenancy" }}
+    {{- end }}
+    
+    {{- $tags := getTags .Resource }}
+    {{ $tags | cpTags }}
+  providerConfigRef:
+    name: default

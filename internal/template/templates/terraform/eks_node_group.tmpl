@@ -1,0 +1,111 @@
+resource "aws_eks_node_group" "{{ .Resource.Name | snake }}" {
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "cluster_name" }}
+  cluster_name = {{ .Value }}
+  {{- else if eq .Name "node_role_arn" }}
+  node_role_arn = {{ .Value }}
+  {{- else if eq .Name "subnet_ids" }}
+  subnet_ids = {{ .Value | toHCL }}
+  {{- else if eq .Name "instance_types" }}
+  instance_types = {{ .Value | toHCL }}
+  {{- else if eq .Name "disk_size" }}
+  disk_size = {{ .Value }}
+  {{- else if eq .Name "capacity_type" }}
+  capacity_type = {{ .Value | quote }}
+  {{- else if eq .Name "scaling_config" }}
+  {{- if .Value }}
+  scaling_config {
+    {{- if index .Value "desired_size" }}
+    desired_size = {{ index .Value "desired_size" }}
+    {{- end }}
+    {{- if index .Value "min_size" }}
+    min_size = {{ index .Value "min_size" }}
+    {{- end }}
+    {{- if index .Value "max_size" }}
+    max_size = {{ index .Value "max_size" }}
+    {{- end }}
+  }
+  {{- end }}
+  {{- else if hasPrefix .Name "tag." }}
+  {{- $tagName := trimPrefix "tag." .Name }}
+  tags = {
+    {{ $tagName }} = {{ .Value | quote }}
+  }
+  {{- end }}
+  {{- end }}
+
+  # Define a default scaling config if not provided
+  {{- $hasScalingConfig := false }}
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "scaling_config" }}
+  {{- $hasScalingConfig = true }}
+  {{- end }}
+  {{- end }}
+  {{- if not $hasScalingConfig }}
+  scaling_config {
+    desired_size = 2
+    min_size     = 1
+    max_size     = 3
+  }
+  {{- end }}
+
+  # Add default update config
+  update_config {
+    max_unavailable = 1
+  }
+
+  tags = {
+    Name = "{{ .Resource.Name }}"
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.{{ .Resource.Name | snake }}_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.{{ .Resource.Name | snake }}_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.{{ .Resource.Name | snake }}_AmazonEC2ContainerRegistryReadOnly
+  ]
+}
+
+# IAM Role for EKS Node Group if not specified
+{{- $hasNodeRoleArn := false }}
+{{- range .Resource.Properties }}
+{{- if eq .Name "node_role_arn" }}
+{{- $hasNodeRoleArn = true }}
+{{- end }}
+{{- end }}
+{{- if not $hasNodeRoleArn }}
+resource "aws_iam_role" "{{ .Resource.Name | snake }}_role" {
+  name = "{{ .Resource.Name }}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "{{ .Resource.Name }}-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "{{ .Resource.Name | snake }}_AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.{{ .Resource.Name | snake }}_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "{{ .Resource.Name | snake }}_AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.{{ .Resource.Name | snake }}_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "{{ .Resource.Name | snake }}_AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.{{ .Resource.Name | snake }}_role.name
+}
+{{- end }}

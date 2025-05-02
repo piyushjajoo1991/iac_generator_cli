@@ -1,0 +1,19 @@
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: InternetGateway
+metadata:
+  name: {{ .Resource.Name | kebab }}
+spec:
+  forProvider:
+    {{- if hasProperty .Resource "vpc_id" }}
+    vpcIdRef:
+      name: {{ getProperty .Resource "vpc_id" | kebab }}
+    {{- else if .Resource.DependsOn }}
+    vpcIdRef:
+      name: {{ (index .Resource.DependsOn 0) | kebab }}
+    {{- end }}
+    
+    {{- $tags := getTags .Resource }}
+    {{ $tags | cpTags }}
+  providerConfigRef:
+    name: default

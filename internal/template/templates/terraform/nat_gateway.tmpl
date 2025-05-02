@@ -1,0 +1,38 @@
+resource "aws_nat_gateway" "{{ .Resource.Name | snake }}" {
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "subnet_id" }}
+  subnet_id = {{ .Value }}
+  {{- else if eq .Name "allocation_id" }}
+  allocation_id = {{ .Value }}
+  {{- else if eq .Name "connectivity_type" }}
+  connectivity_type = {{ .Value | quote }}
+  {{- else if hasPrefix .Name "tag." }}
+  {{- $tagName := trimPrefix "tag." .Name }}
+  tags = {
+    {{ $tagName }} = {{ .Value | quote }}
+  }
+  {{- end }}
+  {{- end }}
+
+  {{- if not (contains .Resource.Properties "allocation_id") }}
+  # Create a new EIP for NAT Gateway if allocation_id is not specified
+  allocation_id = aws_eip.{{ .Resource.Name | snake }}_eip.id
+  {{- end }}
+
+  tags = {
+    Name = "{{ .Resource.Name }}"
+  }
+
+  depends_on = [aws_internet_gateway.main_igw]
+}
+
+{{- if not (contains .Resource.Properties "allocation_id") }}
+# Create EIP for NAT Gateway
+resource "aws_eip" "{{ .Resource.Name | snake }}_eip" {
+  domain = "vpc"
+  
+  tags = {
+    Name = "{{ .Resource.Name }}-eip"
+  }
+}
+{{- end }}

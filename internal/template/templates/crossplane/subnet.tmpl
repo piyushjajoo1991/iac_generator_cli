@@ -1,0 +1,33 @@
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: Subnet
+metadata:
+  name: {{ .Resource.Name | kebab }}
+spec:
+  forProvider:
+    {{- if hasProperty .Resource "vpc_id" }}
+    vpcIdRef:
+      name: {{ getProperty .Resource "vpc_id" | kebab }}
+    {{- else if .Resource.DependsOn }}
+    vpcIdRef:
+      name: {{ (index .Resource.DependsOn 0) | kebab }}
+    {{- end }}
+    
+    {{- with getProperty .Resource "cidr_block" }}
+    cidrBlock: {{ . }}
+    {{- end }}
+    
+    {{- with getProperty .Resource "availability_zone" }}
+    availabilityZone: {{ . }}
+    {{- end }}
+    
+    {{- if hasProperty .Resource "map_public_ip_on_launch" }}
+    mapPublicIpOnLaunch: {{ getProperty .Resource "map_public_ip_on_launch" }}
+    {{- else if hasProperty .Resource "is_public" }}
+    mapPublicIpOnLaunch: {{ getProperty .Resource "is_public" }}
+    {{- end }}
+    
+    {{- $tags := getTags .Resource }}
+    {{ $tags | cpTags }}
+  providerConfigRef:
+    name: default

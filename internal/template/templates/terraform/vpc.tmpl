@@ -1,0 +1,24 @@
+resource "aws_vpc" "{{ .Resource.Name | snake }}" {
+  {{- with getProperty .Resource "cidr_block" }}
+  cidr_block = {{ . | quote }}
+  {{- end }}
+
+  {{- if hasProperty .Resource "enable_dns_support" }}
+  enable_dns_support = {{ getProperty .Resource "enable_dns_support" }}
+  {{- else }}
+  enable_dns_support = true
+  {{- end }}
+
+  {{- if hasProperty .Resource "enable_dns_hostnames" }}
+  enable_dns_hostnames = {{ getProperty .Resource "enable_dns_hostnames" }}
+  {{- else }}
+  enable_dns_hostnames = true
+  {{- end }}
+
+  {{- if hasProperty .Resource "instance_tenancy" }}
+  instance_tenancy = {{ getProperty .Resource "instance_tenancy" | quote }}
+  {{- end }}
+
+  {{- $tags := getTags .Resource }}
+  {{ $tags | tfTags }}
+}

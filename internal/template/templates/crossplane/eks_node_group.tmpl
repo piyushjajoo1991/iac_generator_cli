@@ -1,0 +1,43 @@
+---
+apiVersion: eks.aws.crossplane.io/v1beta1
+kind: NodeGroup
+metadata:
+  name: {{ .Resource.Name | kebab }}
+spec:
+  forProvider:
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "cluster_name" }}
+    clusterName: {{ .Value }}
+  {{- else if eq .Name "node_role_arn" }}
+    nodeRole: {{ .Value }}
+  {{- else if eq .Name "subnet_ids" }}
+    subnets:
+    {{- range .Value }}
+      - {{ . }}
+    {{- end }}
+  {{- else if eq .Name "instance_types" }}
+    instanceTypes:
+    {{- range .Value }}
+      - {{ . }}
+    {{- end }}
+  {{- else if eq .Name "disk_size" }}
+    diskSize: {{ .Value }}
+  {{- else if eq .Name "capacity_type" }}
+    capacityType: {{ .Value }}
+  {{- else if eq .Name "scaling_config" }}
+    {{- if .Value }}
+    scalingConfig:
+      {{- if index .Value "desired_size" }}
+      desiredSize: {{ index .Value "desired_size" }}
+      {{- end }}
+      {{- if index .Value "min_size" }}
+      minSize: {{ index .Value "min_size" }}
+      {{- end }}
+      {{- if index .Value "max_size" }}
+      maxSize: {{ index .Value "max_size" }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+    tags:
+      Name: {{ .Resource.Name }}

@@ -1,0 +1,30 @@
+resource "aws_instance" "{{ .Resource.Name | snake }}" {
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "instance_type" }}
+  instance_type = {{ .Value | quote }}
+  {{- else if eq .Name "ami" }}
+  ami = {{ .Value | quote }}
+  {{- else if eq .Name "subnet_id" }}
+  subnet_id = {{ .Value }}
+  {{- else if eq .Name "security_groups" }}
+  security_groups = {{ .Value | toHCL }}
+  {{- else if eq .Name "vpc_security_group_ids" }}
+  vpc_security_group_ids = {{ .Value | toHCL }}
+  {{- else if eq .Name "key_name" }}
+  key_name = {{ .Value | quote }}
+  {{- else if eq .Name "associate_public_ip_address" }}
+  associate_public_ip_address = {{ .Value }}
+  {{- else if eq .Name "user_data" }}
+  user_data = {{ .Value | quote }}
+  {{- else if hasPrefix .Name "tag." }}
+  {{- $tagName := trimPrefix "tag." .Name }}
+  tags = {
+    {{ $tagName }} = {{ .Value | quote }}
+  }
+  {{- end }}
+  {{- end }}
+
+  tags = {
+    Name = "{{ .Resource.Name }}"
+  }
+}

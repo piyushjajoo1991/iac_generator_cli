@@ -1,0 +1,66 @@
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: SecurityGroup
+metadata:
+  name: {{ .Resource.Name | kebab }}
+spec:
+  forProvider:
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "name" }}
+    groupName: {{ .Value }}
+  {{- else if eq .Name "description" }}
+    description: {{ .Value }}
+  {{- else if eq .Name "vpc_id" }}
+    vpcIdRef:
+      name: {{ .Value | kebab }}
+  {{- end }}
+  {{- end }}
+
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "ingress" }}
+    ingress:
+    {{- range .Value }}
+    - fromPort: {{ .from_port }}
+      toPort: {{ .to_port }}
+      ipProtocol: {{ .protocol }}
+      {{- if .cidr_blocks }}
+      ipRanges:
+      {{- range .cidr_blocks }}
+      - cidrIp: {{ . }}
+      {{- end }}
+      {{- end }}
+      {{- if .security_groups }}
+      userIdGroupPairs:
+      {{- range .security_groups }}
+      - groupId: {{ . }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "egress" }}
+    egress:
+    {{- range .Value }}
+    - fromPort: {{ .from_port }}
+      toPort: {{ .to_port }}
+      ipProtocol: {{ .protocol }}
+      {{- if .cidr_blocks }}
+      ipRanges:
+      {{- range .cidr_blocks }}
+      - cidrIp: {{ . }}
+      {{- end }}
+      {{- end }}
+      {{- if .security_groups }}
+      userIdGroupPairs:
+      {{- range .security_groups }}
+      - groupId: {{ . }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+    tags:
+      - key: Name
+        value: {{ .Resource.Name }}

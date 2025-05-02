@@ -1,0 +1,40 @@
+resource "aws_s3_bucket" "{{ .Resource.Name | snake }}" {
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "bucket" }}
+  bucket = {{ .Value | quote }}
+  {{- else if hasPrefix .Name "tag." }}
+  {{- $tagName := trimPrefix "tag." .Name }}
+  tags = {
+    {{ $tagName }} = {{ .Value | quote }}
+  }
+  {{- end }}
+  {{- end }}
+
+  tags = {
+    Name = "{{ .Resource.Name }}"
+  }
+}
+
+{{- $hasACL := false }}
+{{- range .Resource.Properties }}
+{{- if eq .Name "acl" }}
+{{- $hasACL = true }}
+resource "aws_s3_bucket_acl" "{{ $.Resource.Name | snake }}_acl" {
+  bucket = aws_s3_bucket.{{ $.Resource.Name | snake }}.id
+  acl    = {{ .Value | quote }}
+}
+{{- end }}
+{{- end }}
+
+{{- $hasVersioning := false }}
+{{- range .Resource.Properties }}
+{{- if eq .Name "versioning" }}
+{{- $hasVersioning = true }}
+resource "aws_s3_bucket_versioning" "{{ $.Resource.Name | snake }}_versioning" {
+  bucket = aws_s3_bucket.{{ $.Resource.Name | snake }}.id
+  versioning_configuration {
+    status = {{ if .Value }}"Enabled"{{ else }}"Disabled"{{ end }}
+  }
+}
+{{- end }}
+{{- end }}

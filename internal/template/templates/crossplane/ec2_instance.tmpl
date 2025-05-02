@@ -1,0 +1,36 @@
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: Instance
+metadata:
+  name: {{ .Resource.Name | kebab }}
+spec:
+  forProvider:
+  {{- range .Resource.Properties }}
+  {{- if eq .Name "instance_type" }}
+    instanceType: {{ .Value }}
+  {{- else if eq .Name "ami" }}
+    imageId: {{ .Value }}
+  {{- else if eq .Name "subnet_id" }}
+    subnetIdRef:
+      name: {{ .Value | kebab }}
+  {{- else if eq .Name "security_groups" }}
+    securityGroups:
+    {{- range .Value }}
+      - {{ . }}
+    {{- end }}
+  {{- else if eq .Name "vpc_security_group_ids" }}
+    securityGroupIdRefs:
+    {{- range .Value }}
+      - name: {{ . | kebab }}
+    {{- end }}
+  {{- else if eq .Name "key_name" }}
+    keyName: {{ .Value }}
+  {{- else if eq .Name "associate_public_ip_address" }}
+    associatePublicIpAddress: {{ .Value }}
+  {{- else if eq .Name "user_data" }}
+    userData: {{ .Value }}
+  {{- end }}
+  {{- end }}
+    tags:
+      - key: Name
+        value: {{ .Resource.Name }}

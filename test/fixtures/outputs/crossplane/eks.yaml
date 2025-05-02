@@ -1,0 +1,164 @@
+apiVersion: eks.aws.crossplane.io/v1beta1
+kind: Cluster
+metadata:
+  name: main-eks-cluster
+spec:
+  forProvider:
+    region: us-east-1
+    version: "1.27"
+    roleArnRef:
+      name: eks-cluster-role
+    resourcesVpcConfig:
+      subnetIdRefs:
+        - name: private-subnet-1
+        - name: private-subnet-2
+      endpointPrivateAccess: false
+      endpointPublicAccess: true
+      securityGroupIdRefs:
+        - name: eks-cluster-sg
+    tags:
+      Name: main-eks-cluster
+  providerConfigRef:
+    name: default
+---
+apiVersion: eks.aws.crossplane.io/v1beta1
+kind: NodeGroup
+metadata:
+  name: main-node-group
+spec:
+  forProvider:
+    region: us-east-1
+    clusterNameRef:
+      name: main-eks-cluster
+    nodeRoleArnRef:
+      name: eks-node-group-role
+    subnetIdRefs:
+      - name: private-subnet-1
+      - name: private-subnet-2
+    instanceTypes:
+      - t3.medium
+    scalingConfig:
+      desiredSize: 2
+      maxSize: 4
+      minSize: 2
+    tags:
+      Name: main-node-group
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  name: eks-cluster-role
+spec:
+  forProvider:
+    region: us-east-1
+    assumeRolePolicyDocument: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "eks.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+    tags:
+      - key: Name
+        value: eks-cluster-role
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: eks-cluster-policy-attachment
+spec:
+  forProvider:
+    region: us-east-1
+    policyArn: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+    roleNameRef:
+      name: eks-cluster-role
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: eks-vpc-resource-controller-attachment
+spec:
+  forProvider:
+    region: us-east-1
+    policyArn: arn:aws:iam::aws:policy/AmazonEKSVPCResourceController
+    roleNameRef:
+      name: eks-cluster-role
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  name: eks-node-group-role
+spec:
+  forProvider:
+    region: us-east-1
+    assumeRolePolicyDocument: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+    tags:
+      - key: Name
+        value: eks-node-group-role
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: eks-worker-node-policy-attachment
+spec:
+  forProvider:
+    region: us-east-1
+    policyArn: arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+    roleNameRef:
+      name: eks-node-group-role
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: eks-cni-policy-attachment
+spec:
+  forProvider:
+    region: us-east-1
+    policyArn: arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+    roleNameRef:
+      name: eks-node-group-role
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: ecr-read-only-policy-attachment
+spec:
+  forProvider:
+    region: us-east-1
+    policyArn: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+    roleNameRef:
+      name: eks-node-group-role
+  providerConfigRef:
+    name: default
