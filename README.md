@@ -470,5 +470,6 @@ Format all documentation as markdown files suitable for GitHub hosting.
 
 These prompts are designed to be used with Claude Code to implement a Go-based version of the IaC Manifest Generator CLI. Each prompt focuses on a specific component while maintaining alignment with the overall architecture and MVP plan, allowing for iterative development of a complete solution.
 
-**Total cost - $14.00 to generate the code by running the prompts above**
+**Total cost - $14.00 to generate the code by running the prompts above.**
+
 **Total cost for validating the tests work and regenerate the documents - $20.52**
